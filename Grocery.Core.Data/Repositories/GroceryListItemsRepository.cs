@@ -92,7 +92,7 @@ namespace Grocery.Core.Data.Repositories
         {
             string deleteQuery = $"DELETE FROM GroceryListItem WHERE Id = {item.Id};";
             OpenConnection();
-            Connection.ExecuteNonQuery(deleteQuery);
+            //Connection.ExecuteNonQuery(deleteQuery);
             CloseConnection();
             return item;
         }
