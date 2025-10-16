@@ -18,10 +18,29 @@ namespace Grocery.Core.Data.Repositories
                             [Date] DATE NOT NULL,
                             [Color] NVARCHAR(12) NOT NULL,
                             [ClientId] INTEGER NOT NULL)");
+
             List<string> insertQueries = [@"INSERT OR IGNORE INTO GroceryList(Name, Date, Color, ClientId) VALUES('Boodschappen familieweekend', '2024-12-14', '#FF6A00', 1)",
                                           @"INSERT OR IGNORE INTO GroceryList(Name, Date, Color, ClientId) VALUES('Kerstboodschappen', '2024-12-07', '#626262', 1)",
                                           @"INSERT OR IGNORE INTO GroceryList(Name, Date, Color, ClientId) VALUES('Weekend boodschappen', '2024-11-30', '#003300', 1)"];
-            InsertMultipleWithTransaction(insertQueries);
+
+            // Only insert the sample data when the GroceryList table is empty (initial startup).
+            int existingCount = 0;
+            OpenConnection();
+            using (var countCmd = new SqliteCommand("SELECT COUNT(1) FROM GroceryList;", Connection))
+            {
+                var result = countCmd.ExecuteScalar();
+                if (result != null && int.TryParse(result.ToString(), out int parsed))
+                {
+                    existingCount = parsed;
+                }
+            }
+            CloseConnection();
+
+            if (existingCount == 0)
+            {
+                InsertMultipleWithTransaction(insertQueries);
+            }
+
             GetAll();
         }
 
@@ -49,18 +68,23 @@ namespace Grocery.Core.Data.Repositories
         }
         public GroceryList Add(GroceryList item)
         {
-            int recordsAffected;
-            string insertQuery = $"INSERT INTO GroceryList(Name, Date, Color, ClientId) VALUES(@Name, @Date, @Color, @ClientId) Returning RowId;";
+            string insertQuery = @"INSERT OR IGNORE INTO GroceryList(Name, Date, Color, ClientId)
+                                   VALUES(@Name, @Date, @Color, @ClientId);
+                                   SELECT Id FROM GroceryList WHERE Name = @Name;";
+
             OpenConnection();
             using (SqliteCommand command = new(insertQuery, Connection))
             {
-                command.Parameters.AddWithValue("Name", item.Name);
-                command.Parameters.AddWithValue("Date", item.Date);
-                command.Parameters.AddWithValue("Color", item.Color);
-                command.Parameters.AddWithValue("ClientId", item.ClientId);
+                command.Parameters.AddWithValue("@Name", item.Name);
+                command.Parameters.AddWithValue("@Date", item.Date);
+                command.Parameters.AddWithValue("@Color", item.Color);
+                command.Parameters.AddWithValue("@ClientId", item.ClientId);
 
-                //recordsAffected = command.ExecuteNonQuery();
-                item.Id = Convert.ToInt32(command.ExecuteScalar());
+                var result = command.ExecuteScalar();
+                if (result != null && int.TryParse(result.ToString(), out int id))
+                {
+                    item.Id = id;
+                }
             }
             CloseConnection();
             return item;
