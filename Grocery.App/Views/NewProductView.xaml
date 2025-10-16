@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Grocery.App.Views.NewProductView"
+    Title="Create Product">
+
+    <!-- Toolbar item that triggers the same create action as the page button -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem
+            Text="Add"
+            Clicked="OnCreateClicked"
+            Order="Primary"
+            Priority="0" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="18" Spacing="12">
+
+            <Label Text="Product name" FontAttributes="Bold" />
+            <Entry x:Name="NameEntry" Placeholder="Enter product name" />
+
+            <Label Text="Price (e.g. 12.50)" FontAttributes="Bold" />
+            <Entry x:Name="PriceEntry" Placeholder="0.00" Keyboard="Numeric" />
+
+            <Label Text="Stock" FontAttributes="Bold" />
+            <Entry x:Name="StockEntry" Placeholder="0" Keyboard="Numeric" />
+
+            <Label Text="Shelf life (date)" FontAttributes="Bold" />
+            <DatePicker x:Name="ShelfLifePicker" />
+
+            <Button
+                Text="Create product"
+                Clicked="OnCreateClicked"
+                IsEnabled="{Binding CanCreateProduct}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
