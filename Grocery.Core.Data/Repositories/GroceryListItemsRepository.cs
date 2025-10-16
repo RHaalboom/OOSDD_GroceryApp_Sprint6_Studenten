@@ -19,6 +19,10 @@ namespace Grocery.Core.Data.Repositories
                             [ProductId] INTEGER NOT NULL,
                             [Amount] INTEGER NOT NULL)");
 
+            // Ensure combination (GroceryListId, ProductId) is unique to avoid accidental duplicate rows
+            CreateTable(@"CREATE UNIQUE INDEX IF NOT EXISTS IX_GroceryListItem_GroceryListId_ProductId 
+                          ON GroceryListItem(GroceryListId, ProductId);");
+
             List<string> insertQueries = new()
             {
                 @"INSERT OR IGNORE INTO GroceryListItem(GroceryListId, ProductId, Amount) VALUES(1, 1, 3)",
