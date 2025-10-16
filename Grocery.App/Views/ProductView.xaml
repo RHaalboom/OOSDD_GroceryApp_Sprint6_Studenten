@@ -4,7 +4,12 @@
              xmlns:vm="clr-namespace:Grocery.App.ViewModels"
              x:Class="Grocery.App.Views.ProductView"
              Title="ProductView">
-    
+
+    <ContentPage.ToolbarItems>
+        <!-- Toolbar button that navigates to the new product screen -->
+        <ToolbarItem Text="New" Clicked="OnAddClicked" Order="Primary" Priority="0" />
+    </ContentPage.ToolbarItems>
+
     <Shell.TitleView>
         <Grid>
             <Label Text="Producten" FontSize="Large" HorizontalOptions="Center" VerticalOptions="Center" />

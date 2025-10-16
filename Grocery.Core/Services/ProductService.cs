@@ -20,7 +20,14 @@ namespace Grocery.Core.Services
 
         public Product Add(Product item)
         {
-            throw new NotImplementedException();
+            if (item is null)
+                throw new ArgumentNullException(nameof(item));
+
+            // Basic validation: ensure name provided (repository enforces uniqueness/not-null on DB).
+            if (string.IsNullOrWhiteSpace(item.Name))
+                throw new ArgumentException("Product name must be provided.", nameof(item));
+
+            return _productRepository.Add(item);
         }
 
         public Product? Delete(Product item)
