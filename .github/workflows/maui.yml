@@ -7,12 +7,14 @@ on:
       - develop
       - release/**
       - feature/**
+      - unitTests
   pull_request:
     branches:
       - main
       - develop
       - release/**
       - feature/**
+      - unitTests
 
 jobs:
   test:
@@ -34,6 +36,9 @@ jobs:
 
       - name: Bouw de applicatie
         run: dotnet build --configuration Release --no-restore
+
+      - name: Install SQLite native dependencies (Ubuntu)
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
 
       - name: Voer unit tests uit
         run: dotnet test --configuration Release --no-restore --no-build --verbosity normal
