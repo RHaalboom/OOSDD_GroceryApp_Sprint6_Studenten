@@ -14,7 +14,7 @@ namespace TestCore
         }
 
         [Test]
-        public void AddProduct_ShouldPersistAndBeQueryable()
+        public void AddProduct_CanBeAdded()
         {
             // Arrange: use a unique name to avoid UNIQUE constraint collisions with seed data
             string uniqueName = $"test-product-{Guid.NewGuid():N}";

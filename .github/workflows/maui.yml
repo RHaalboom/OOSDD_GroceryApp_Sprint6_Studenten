@@ -7,12 +7,14 @@ on:
       - develop
       - release/**
       - feature/**
+      - unitTests
   pull_request:
     branches:
       - main
       - develop
       - release/**
       - feature/**
+      - unitTests
 
 jobs:
   test:
