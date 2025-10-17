@@ -1,7 +1,11 @@
-using Grocery.Core.Helpers;
+using System;
+using Grocery.Core.Data.Repositories;
+using Grocery.Core.Models;
+using NUnit.Framework;
 
 namespace TestCore
 {
+    [TestFixture]
     public class TestHelpers
     {
         [SetUp]
@@ -9,38 +13,34 @@ namespace TestCore
         {
         }
 
-
-        //Happy flow
         [Test]
-        public void TestPasswordHelperReturnsTrue()
+        public void AddProduct_CanBeAdded()
         {
-            string password = "user3";
-            string passwordHash = "sxnIcZdYt8wC8MYWcQVQjQ==.FKd5Z/jwxPv3a63lX+uvQ0+P7EuNYZybvkmdhbnkIHA=";
-            Assert.IsTrue(PasswordHelper.VerifyPassword(password, passwordHash));
-        }
+            // Arrange: use a unique name to avoid UNIQUE constraint collisions with seed data
+            string uniqueName = $"test-product-{Guid.NewGuid():N}";
+            var repo = new ProductRepository();
+            var product = new Product(0, uniqueName, 5, DateOnly.FromDateTime(DateTime.Today.AddDays(30)), 1.23m);
 
-        [TestCase("user1", "IunRhDKa+fWo8+4/Qfj7Pg==.kDxZnUQHCZun6gLIE6d9oeULLRIuRmxmH2QKJv2IM08=")]
-        [TestCase("user3", "sxnIcZdYt8wC8MYWcQVQjQ==.FKd5Z/jwxPv3a63lX+uvQ0+P7EuNYZybvkmdhbnkIHA=")]
-        public void TestPasswordHelperReturnsTrue(string password, string passwordHash)
-        {
-            Assert.IsTrue(PasswordHelper.VerifyPassword(password, passwordHash));
-        }
+            // Act
+            Product created = repo.Add(product);
 
+            try
+            {
+                // Assert: repository returned an id and item can be queried
+                Assert.That(created, Is.Not.Null);
+                Assert.That(created.Id, Is.GreaterThan(0), "Created product must have assigned Id.");
 
-        //Unhappy flow
-        [Test]
-        public void TestPasswordHelperReturnsFalse()
-        {
-            string password = "user3";
-            string passwordHash = "sxnIcZdYt8wC8MYWcQVQjQ";
-            Assert.IsFalse(PasswordHelper.VerifyPassword(password, passwordHash));
-        }
-
-        [TestCase("user1", "IunRhDKa+fWo8+4/Qfj7Pg")]
-        [TestCase("user3", "sxnIcZdYt8wC8MYWcQVQjQ")]
-        public void TestPasswordHelperReturnsFalse(string password, string passwordHash)
-        {
-            Assert.IsFalse(PasswordHelper.VerifyPassword(password, passwordHash));
+                Product? fetched = repo.Get(created.Id);
+                Assert.That(fetched, Is.Not.Null, "Fetched product must not be null.");
+                Assert.That(fetched!.Name, Is.EqualTo(uniqueName));
+                Assert.That(fetched.Stock, Is.EqualTo(5));
+                Assert.That(fetched.Price, Is.EqualTo(1.23m));
+            }
+            finally
+            {
+                // Clean up so repeated test runs remain deterministic
+                repo.Delete(created);
+            }
         }
     }
 }

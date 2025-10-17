@@ -2,11 +2,11 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+	<IsTestProject>true</IsTestProject>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
     <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,10 +19,18 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Grocery.Core\Grocery.Core.csproj" />
+	<ProjectReference Include="..\Grocery.Core.Data\Grocery.Core.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="NUnit.Framework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Grocery.Core.Data\appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>appsettings.json</Link>
+    </None>
   </ItemGroup>
 
 </Project>
