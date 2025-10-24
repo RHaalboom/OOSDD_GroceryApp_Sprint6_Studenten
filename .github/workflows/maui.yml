@@ -36,8 +36,8 @@ jobs:
       - name: Herstel afhankelijkheden (include win-x64 runtime pack)
         run: dotnet restore --runtime win-x64
 
-      - name: Bouw de applicatie
-        run: dotnet build --configuration Release --no-restore -r win-x64
+      - name: Bouw de applicatie (solution-level build — no RID)
+        run: dotnet build --configuration Release --no-restore
 
-      - name: Voer unit tests uit
+      - name: Voer unit tests uit (use RID, but do not build)
         run: dotnet test --configuration Release --no-restore --no-build -r win-x64 --verbosity normal
