@@ -19,15 +19,16 @@ namespace Grocery.Core.Data.Repositories
                             [Name] NVARCHAR(120) UNIQUE NOT NULL,
                             [Stock] INTEGER NOT NULL,
                             [ShelfLife] DATE,
-                            [Price] NUMERIC NOT NULL DEFAULT 0)");
+                            [Price] NUMERIC NOT NULL DEFAULT 0,
+                            [MinimumAge] INTEGER NULL)");
 
             List<string> insertQueries = new()
             {
                 // sample data; uses ISO date format. INSERT OR IGNORE to avoid duplicates.
-                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price) VALUES('Melk', 300, '2025-09-25', 0.95)",
-                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price) VALUES('Kaas', 100, '2025-09-30', 7.98)",
-                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price) VALUES('Brood', 400, '2025-09-12', 2.19)",
-                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price) VALUES('Cornflakes', 0, '2025-12-31', 1.48)"
+                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price, MinimumAge) VALUES('Melk', 300, '2025-09-25', 0.95, NULL)",
+                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price, MinimumAge) VALUES('Kaas', 100, '2025-09-30', 7.98, NULL)",
+                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price, MinimumAge) VALUES('Brood', 400, '2025-09-12', 2.19, NULL)",
+                @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price, MinimumAge) VALUES('Cornflakes', 0, '2025-12-31', 1.48, NULL)"
             };
 
             // Only insert the sample data when the Product table is empty (initial startup).
@@ -54,7 +55,7 @@ namespace Grocery.Core.Data.Repositories
         public List<Product> GetAll()
         {
             products.Clear();
-            string selectQuery = "SELECT Id, Name, Stock, ShelfLife, Price FROM Product";
+            string selectQuery = "SELECT Id, Name, Stock, ShelfLife, Price, MinimumAge FROM Product";
             OpenConnection();
             using (SqliteCommand command = new(selectQuery, Connection))
             {
@@ -80,15 +81,13 @@ namespace Grocery.Core.Data.Repositories
                         price = Convert.ToDecimal(reader.GetValue(4));
                     }
 
-                    // Use the most complete constructor available depending on values
-                    if (!reader.IsDBNull(3))
+                    int? minimumAge = null;
+                    if (!reader.IsDBNull(5))
                     {
-                        products.Add(new Product(id, name, stock, shelfLife, price));
+                        minimumAge = reader.GetInt32(5);
                     }
-                    else
-                    {
-                        products.Add(new Product(id, name, stock, default, price));
-                    }
+
+                    products.Add(new Product(id, name, stock, shelfLife, price, minimumAge));
                 }
             }
             CloseConnection();
@@ -98,7 +97,7 @@ namespace Grocery.Core.Data.Repositories
         public Product? Get(int id)
         {
             Product? product = null;
-            string selectQuery = $"SELECT Id, Name, Stock, ShelfLife, Price FROM Product WHERE Id = {id}";
+            string selectQuery = $"SELECT Id, Name, Stock, ShelfLife, Price, MinimumAge FROM Product WHERE Id = {id}";
             OpenConnection();
             using (SqliteCommand command = new(selectQuery, Connection))
             {
@@ -116,14 +115,14 @@ namespace Grocery.Core.Data.Repositories
                     }
 
                     decimal price = reader.IsDBNull(4) ? 0m : Convert.ToDecimal(reader.GetValue(4));
-                    if (!reader.IsDBNull(3))
+
+                    int? minimumAge = null;
+                    if (!reader.IsDBNull(5))
                     {
-                        product = new Product(pid, name, stock, shelfLife, price);
+                        minimumAge = reader.GetInt32(5);
                     }
-                    else
-                    {
-                        product = new Product(pid, name, stock, default, price);
-                    }
+
+                    product = new Product(pid, name, stock, shelfLife, price, minimumAge);
                 }
             }
             CloseConnection();
@@ -132,8 +131,8 @@ namespace Grocery.Core.Data.Repositories
 
         public Product Add(Product item)
         {
-            string insertQuery = @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price)
-                                   VALUES(@Name, @Stock, @ShelfLife, @Price);
+            string insertQuery = @"INSERT OR IGNORE INTO Product(Name, Stock, ShelfLife, Price, MinimumAge)
+                                   VALUES(@Name, @Stock, @ShelfLife, @Price, @MinimumAge);
                                    SELECT Id FROM Product WHERE Name = @Name;";
 
             OpenConnection();
@@ -148,6 +147,11 @@ namespace Grocery.Core.Data.Repositories
                     command.Parameters.AddWithValue("@ShelfLife", item.ShelfLife);
 
                 command.Parameters.AddWithValue("@Price", item.Price);
+
+                if (item.MinimumAge.HasValue)
+                    command.Parameters.AddWithValue("@MinimumAge", item.MinimumAge.Value);
+                else
+                    command.Parameters.AddWithValue("@MinimumAge", DBNull.Value);
 
                 var result = command.ExecuteScalar();
                 if (result != null && int.TryParse(result.ToString(), out int id))
@@ -173,7 +177,7 @@ namespace Grocery.Core.Data.Repositories
 
         public Product? Update(Product item)
         {
-            string updateQuery = $"UPDATE Product SET Name = @Name, Stock = @Stock, ShelfLife = @ShelfLife, Price = @Price WHERE Id = {item.Id};";
+            string updateQuery = $"UPDATE Product SET Name = @Name, Stock = @Stock, ShelfLife = @ShelfLife, Price = @Price, MinimumAge = @MinimumAge WHERE Id = {item.Id};";
             OpenConnection();
             using (SqliteCommand command = new(updateQuery, Connection))
             {
@@ -186,6 +190,11 @@ namespace Grocery.Core.Data.Repositories
                     command.Parameters.AddWithValue("@ShelfLife", item.ShelfLife);
 
                 command.Parameters.AddWithValue("@Price", item.Price);
+
+                if (item.MinimumAge.HasValue)
+                    command.Parameters.AddWithValue("@MinimumAge", item.MinimumAge.Value);
+                else
+                    command.Parameters.AddWithValue("@MinimumAge", DBNull.Value);
 
                 command.ExecuteNonQuery();
             }
