@@ -20,8 +20,8 @@ namespace Grocery.App.Views
             _productService = productService ?? throw new ArgumentNullException(nameof(productService));
     
             ShelfLifePicker.Date = DateTime.Today;
+            ShelfLifePicker.Format = "dd/MM/yyyy";
 
-            // Handle create requests from the ViewModel: persist and broadcast the new product.
             _viewModel.CreateRequested += OnCreateRequested;
         }
 
@@ -48,7 +48,18 @@ namespace Grocery.App.Views
 
             DateOnly shelfLife = DateOnly.FromDateTime(ShelfLifePicker.Date);
 
-            var product = new Product(0, name, stock, shelfLife, price);
+            int? minimumAge = null;
+            if (!string.IsNullOrWhiteSpace(MinimumAgeEntry?.Text))
+            {
+                if (!int.TryParse(MinimumAgeEntry.Text, out int parsedAge))
+                {
+                    await DisplayAlert("Error!", "Minimumleeftijd moet een volledig nummer zijn", "OK");
+                    return;
+                }
+                minimumAge = parsedAge;
+            }
+
+            var product = new Product(0, name, stock, shelfLife, price, minimumAge);
 
             var cmd = _viewModel.CreateProductCommand;
             if (cmd != null && cmd.CanExecute(product))
@@ -59,6 +70,7 @@ namespace Grocery.App.Views
                 PriceEntry.Text = string.Empty;
                 StockEntry.Text = string.Empty;
                 ShelfLifePicker.Date = DateTime.Today;
+                if (MinimumAgeEntry != null) MinimumAgeEntry.Text = string.Empty;
 
                 await DisplayAlert("Success", "Product aangemaakt!", "OK");
             }

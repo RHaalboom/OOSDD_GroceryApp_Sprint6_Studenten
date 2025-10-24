@@ -3,36 +3,29 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     x:Class="Grocery.App.Views.NewProductView"
-    Title="Create Product">
-
-    <!-- Toolbar item that triggers the same create action as the page button -->
-    <ContentPage.ToolbarItems>
-        <ToolbarItem
-            Text="Add"
-            Clicked="OnCreateClicked"
-            Order="Primary"
-            Priority="0" />
-    </ContentPage.ToolbarItems>
+    Title="Nieuw product">
 
     <ScrollView>
-        <VerticalStackLayout Padding="18" Spacing="12">
+        <VerticalStackLayout Padding="20" Spacing="12">
 
-            <Label Text="Product name" FontAttributes="Bold" />
-            <Entry x:Name="NameEntry" Placeholder="Enter product name" />
+            <Label Text="Nieuw product" FontAttributes="Bold" FontSize="18" />
 
-            <Label Text="Price (e.g. 12.50)" FontAttributes="Bold" />
-            <Entry x:Name="PriceEntry" Placeholder="0.00" Keyboard="Numeric" />
+            <Label Text="Naam" />
+            <Entry x:Name="NameEntry" Placeholder="Naam" />
 
-            <Label Text="Stock" FontAttributes="Bold" />
-            <Entry x:Name="StockEntry" Placeholder="0" Keyboard="Numeric" />
+            <Label Text="Stock" />
+            <Entry x:Name="StockEntry" Keyboard="Numeric" Placeholder="0" />
 
-            <Label Text="Shelf life (date)" FontAttributes="Bold" />
+            <Label Text="Prijs" />
+            <Entry x:Name="PriceEntry" Keyboard="Numeric" Placeholder="0.00" />
+
+            <Label Text="Minimumleeftijd (optioneel)" />
+            <Entry x:Name="MinimumAgeEntry" Keyboard="Numeric" Placeholder="Bijv. 18" />
+
+            <Label Text="Houdbaarheid" />
             <DatePicker x:Name="ShelfLifePicker" />
 
-            <Button
-                Text="Create product"
-                Clicked="OnCreateClicked"
-                IsEnabled="{Binding CanCreateProduct}" />
+            <Button Text="Maak aan" Clicked="OnCreateClicked" />
 
         </VerticalStackLayout>
     </ScrollView>

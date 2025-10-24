@@ -6,6 +6,7 @@ using Grocery.Core.Interfaces.Services;
 using Grocery.Core.Models;
 using System.Collections.ObjectModel;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Grocery.App.ViewModels
 {
@@ -58,10 +59,27 @@ namespace Grocery.App.ViewModels
             Dictionary<string, object> paramater = new() { { nameof(GroceryList), GroceryList } };
             await Shell.Current.GoToAsync($"{nameof(ChangeColorView)}?Name={GroceryList.Name}", true, paramater);
         }
+
+        // Now async: ask for confirmation when product.MinimumAge is set.
         [RelayCommand]
-        public void AddProduct(Product product)
+        public async Task AddProduct(Product product)
         {
             if (product == null) return;
+
+            // If product requires a minimum age, show a confirmation dialog.
+            if (product.MinimumAge.HasValue && product.MinimumAge.Value > 0)
+            {
+                var title = "Bevestig leeftijd";
+                var message = $"Dit product vereist een minimumleeftijd van {product.MinimumAge.Value}. Bent u minstens {product.MinimumAge.Value} jaar?";
+                // Use the current MainPage to show the alert. If unavailable, proceed (best-effort).
+                var mainPage = Application.Current?.MainPage;
+                if (mainPage != null)
+                {
+                    bool confirmed = await mainPage.DisplayAlert(title, message, "Ja", "Nee");
+                    if (!confirmed) return; // user selected "Nee" -> do not add
+                }
+            }
+
             GroceryListItem item = new(0, GroceryList.Id, product.Id, 1);
             _groceryListItemsService.Add(item);
             product.Stock--;
