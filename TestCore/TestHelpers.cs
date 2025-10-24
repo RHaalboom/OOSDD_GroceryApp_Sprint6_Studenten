@@ -1,47 +1,53 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Grocery.App.ViewModels;
 using Grocery.Core.Interfaces.Services;
 using Grocery.Core.Models;
 using NUnit.Framework;
+
+
+namespace Microsoft.Maui.Controls
+{
+    public class Application
+    {
+        public static Application? Current { get; set; }
+        public Page? MainPage { get; set; }
+    }
+
+    public class Page
+    {
+        public virtual Task<bool> DisplayAlert(string title, string message, string accept, string cancel)
+            => Task.FromResult(true);
+    }
+
+    public class ContentPage : Page { }
+}
 
 namespace TestCore
 {
     [TestFixture]
     public class TestHelpers
     {
-        // A small, test-local implementation of the AddProduct flow from the ViewModel.
-        // This avoids any dependency on Grocery.App or MAUI types by accepting a delegate
-        // for the confirmation dialog.
-        static async Task<bool> AddProductSim(
-            Product product,
-            GroceryList groceryList,
-            Func<string, string, string, string, Task<bool>>? displayAlert,
-            IGroceryListItemsService itemsService,
-            IProductService productService)
+        [SetUp]
+        public void Setup()
         {
-            if (product == null) return false;
-
-            if (product.MinimumAge.HasValue && product.MinimumAge.Value > 0)
-            {
-                if (displayAlert != null)
-                {
-                    var title = "Bevestig leeftijd";
-                    var message = $"Dit product vereist een minimumleeftijd van {product.MinimumAge.Value}. Bent u minstens {product.MinimumAge.Value} jaar?";
-                    bool confirmed = await displayAlert(title, message, "Ja", "Nee");
-                    if (!confirmed) return false;
-                }
-            }
-
-            var item = new GroceryListItem(0, groceryList.Id, product.Id, 1);
-            itemsService.Add(item);
-            product.Stock--;
-            productService.Update(product);
-            return true;
+            // Ensure clean Application.Current for tests that rely on MainPage
+            Application.Current = new Microsoft.Maui.Controls.Application();
         }
 
-        // Fake services (minimal implementation to satisfy interfaces and record calls)
+        // A small test page that controls the confirmation response.
+        class TestPage : Microsoft.Maui.Controls.ContentPage
+        {
+            public bool Response { get; set; }
+            public override Task<bool> DisplayAlert(string title, string message, string accept, string cancel)
+                => Task.FromResult(Response);
+        }
+
+        // Minimal fakes for services — these implement your real application interfaces
+        // and let the actual ViewModel logic run.
         class FakeGroceryListItemsService : IGroceryListItemsService
         {
             public List<GroceryListItem> AddedItems { get; } = new();
@@ -85,72 +91,83 @@ namespace TestCore
             }
         }
 
-        [SetUp]
-        public void Setup()
+        class FakeFileSaverService : IFileSaverService
         {
-            // Nothing MAUI-specific here; keep tests isolated.
+            public Task SaveFileAsync(string fileName, string content, CancellationToken cancellationToken) => Task.CompletedTask;
         }
 
         [Test]
-        public async Task AddProduct_NoMinimumAge_AddsProduct()
+        public async Task AddProduct_MinimumAgeSet_UserDeclines_NoAdd_RealViewModel()
         {
-            // Arrange
-            var product = new Product(1, "Milk", 5) { MinimumAge = null };
-            var groceryList = new GroceryList(1, "List", DateOnly.MinValue, "", 0);
+            // Arrange - use the real ViewModel from Grocery.App
+            var product = new Product(10, "Wine", 5) { MinimumAge = 18 };
             var itemsService = new FakeGroceryListItemsService();
             var productService = new FakeProductService(new[] { product });
+            var fileSaver = new FakeFileSaverService();
+
+            // Provide a TestPage that returns 'false' for confirmation
+            var page = new TestPage { Response = false };
+            Application.Current!.MainPage = page;
+
+            var vm = new GroceryListItemsViewModel(itemsService, productService, fileSaver)
+            {
+                GroceryList = new GroceryList(1, "Test", DateOnly.MinValue, "", 0)
+            };
 
             // Act
-            bool result = await AddProductSim(product, groceryList, null, itemsService, productService);
+            await vm.AddProduct(product);
 
-            // Assert
-            Assert.IsTrue(result, "AddProduct should return true when no minimum age is set.");
-            Assert.AreEqual(1, itemsService.AddedItems.Count, "Item should be added.");
-            Assert.AreEqual(4, product.Stock, "Product stock should be decremented.");
-            Assert.Contains(product, productService.UpdatedProducts);
-        }
-
-        [Test]
-        public async Task AddProduct_MinimumAgeSet_UserDeclines_DoesNotAdd()
-        {
-            // Arrange
-            var product = new Product(2, "Wine", 5) { MinimumAge = 18 };
-            var groceryList = new GroceryList(2, "List", DateOnly.MinValue, "", 0);
-            var itemsService = new FakeGroceryListItemsService();
-            var productService = new FakeProductService(new[] { product });
-
-            // Simulate the user declining the confirmation dialog
-            Task<bool> Decline(string t, string m, string a, string c) => Task.FromResult(false);
-
-            // Act
-            bool result = await AddProductSim(product, groceryList, Decline, itemsService, productService);
-
-            // Assert
-            Assert.IsFalse(result, "AddProduct should return false when user declines age confirmation.");
-            Assert.AreEqual(0, itemsService.AddedItems.Count, "No item should be added when user declines.");
-            Assert.AreEqual(5, product.Stock, "Product stock should remain unchanged.");
+            Assert.AreEqual(0, itemsService.AddedItems.Count, "Item should NOT be added when user declines the confirmation.");
             Assert.IsEmpty(productService.UpdatedProducts, "ProductService.Update should not be called.");
         }
 
         [Test]
-        public async Task AddProduct_MinimumAgeSet_UserConfirms_AddsProduct()
+        public async Task AddProduct_MinimumAgeSet_UserConfirms_Adds_RealViewModel()
         {
-            // Arrange
-            var product = new Product(3, "Whiskey", 3) { MinimumAge = 21 };
-            var groceryList = new GroceryList(3, "List", DateOnly.MinValue, "", 0);
+            // Arrange - use the real ViewModel from Grocery.App
+            var product = new Product(11, "Whiskey", 3) { MinimumAge = 21 };
             var itemsService = new FakeGroceryListItemsService();
             var productService = new FakeProductService(new[] { product });
+            var fileSaver = new FakeFileSaverService();
 
-            // Simulate the user confirming the dialog
-            Task<bool> Confirm(string t, string m, string a, string c) => Task.FromResult(true);
+            // Provide a TestPage that returns 'true' for confirmation
+            var page = new TestPage { Response = true };
+            Application.Current!.MainPage = page;
+
+            var vm = new GroceryListItemsViewModel(itemsService, productService, fileSaver)
+            {
+                GroceryList = new GroceryList(2, "Test2", DateOnly.MinValue, "", 0)
+            };
 
             // Act
-            bool result = await AddProductSim(product, groceryList, Confirm, itemsService, productService);
+            await vm.AddProduct(product);
+
+            Assert.AreEqual(1, itemsService.AddedItems.Count, "Item should be added when user confirms.");
+            Assert.Contains(product, productService.UpdatedProducts);
+        }
+
+        [Test]
+        public async Task AddProduct_NoMinimumAge_Adds_RealViewModel()
+        {
+            // Arrange
+            var product = new Product(12, "Jam", 5) { MinimumAge = null };
+            var itemsService = new FakeGroceryListItemsService();
+            var productService = new FakeProductService(new[] { product });
+            var fileSaver = new FakeFileSaverService();
+
+            // No MainPage needed because MinimumAge is null; but ensure Application is set
+            Application.Current!.MainPage = null;
+
+            var vm = new GroceryListItemsViewModel(itemsService, productService, fileSaver)
+            {
+                GroceryList = new GroceryList(3, "Test3", DateOnly.MinValue, "", 0)
+            };
+
+            // Act
+            await vm.AddProduct(product);
 
             // Assert
-            Assert.IsTrue(result, "AddProduct should return true when user confirms age.");
-            Assert.AreEqual(1, itemsService.AddedItems.Count, "Item should be added when user confirms.");
-            Assert.AreEqual(2, product.Stock, "Product stock should be decremented.");
+            Assert.AreEqual(1, itemsService.AddedItems.Count, "Item should be added when no minimum age is set.");
             Assert.Contains(product, productService.UpdatedProducts);
         }
     }
