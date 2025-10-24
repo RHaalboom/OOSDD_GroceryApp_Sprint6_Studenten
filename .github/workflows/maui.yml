@@ -18,7 +18,7 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Haal de repository op
         uses: actions/checkout@v4
@@ -28,16 +28,17 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Installeer MAUI workloads (inkl. Windows)
-        run: |
-          dotnet workload install maui
-          dotnet workload restore
+      - name: Installeer MAUI workloads
+        run: dotnet workload install maui-android
 
-      - name: Herstel afhankelijkheden (include win-x64 runtime pack)
-        run: dotnet restore --runtime win-x64
+      - name: Herstel afhankelijkheden
+        run: dotnet restore
 
-      - name: Bouw de applicatie (solution-level build — no RID)
+      - name: Bouw de applicatie
         run: dotnet build --configuration Release --no-restore
 
-      - name: Voer unit tests uit (use RID, but do not build)
-        run: dotnet test --configuration Release --no-restore --no-build -r win-x64 --verbosity normal
+      - name: Install SQLite native dependencies (Ubuntu)
+        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+
+      - name: Voer unit tests uit
+        run: dotnet test --configuration Release --no-restore --no-build --verbosity normal
